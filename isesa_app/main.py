@@ -11,14 +11,10 @@ st.set_page_config(layout="wide",
                    page_title="INDIAN SCHOOL EDUCATION STATISTICS ANALYSIS APP",
                    page_icon='📚')
 
-st.title('Indian School Education Statistics Analysis')
-st.markdown("""
+st.set_option('deprecation.showPyplotGlobalUse', False)
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
-* **Python libraries:** pandas, streamlit, numpy, matplotlib, seaborn, geopandas
-* **Data source:** [Indian School Education Statistics](https://data.gov.in/resources/stateut-wise-average-annual-drop-out-rate-2012-13-2014-15-ministry-human-resource
-""")
-
-
+# 
 
 rename_dict={"Primary_Total": "Primary", 
              "Upper Primary_Total": "Upper_Primary", 
@@ -27,7 +23,7 @@ rename_dict={"Primary_Total": "Primary",
 
 
 
-@st.cache_data
+@st.cache_data()
 def load_data():
     df = pd.read_csv('dropout-ratio-2012-2015.csv')
     india = gpd.read_file('Indian_States.txt')
@@ -39,60 +35,70 @@ def load_data():
     df["HrSecondary"] = df["HrSecondary"].astype(float)
     df_total = df[['Primary','Upper_Primary','Secondary','HrSecondary']]
     df["Average"] = df_total.mean(axis=1)
-    return df, india, 
+    return df, india
+ 
 
 with st.spinner("Processing Immigration data...."):
     df, india = load_data()
 
+num_cols = df.select_dtypes(include='number').columns
+cat_cols = df.select_dtypes(include='object').columns
 
 
+c1, c2 = st.columns([3,1])
+c1.image('https://mcmscache.epapr.in/post_images/website_350/post_29811255/full.jpg', use_column_width=True)
+c1.title('Indian School Education Statistics Analysis')
+c1.markdown("""
+* **Python libraries:** pandas, streamlit, numpy, matplotlib, seaborn, geopandas
+* **Data source:** [Indian School Education Statistics](https://data.gov.in/resources/stateut-wise-average-annual-drop-out-rate-2012-13-2014-15-ministry-human-resource
+""")
 
 
-st.title('Dropout Analysis and Visualization')
-st.dataframe(df)
-df["year"] = pd.to_numeric(df["year"], errors="coerce")
-df_grouped = df.groupby("year").mean().reset_index()
+states = df["State_UT"].unique()
+c1, c2 = st.columns(2)
+c1.subheader("Select the state to visualize the dropout rates")
+state = c1.selectbox("State", states)
+df_state = df[df["State_UT"] == state]
+c1.dataframe(df_state, use_container_width=True)
+col = c1.selectbox("Select the level to visualize the dropout rates", num_cols)
+c2.subheader("Line chart of dropout rates for each level")
+fig, ax = plt.subplots(figsize=(10,7))
+sns.barplot(x="year", y=col, data=df_state, ax=ax)
+c2.pyplot(fig, use_container_width=True)
+
+
+c2.info("Raw dataset")
+c2.dataframe(df, use_container_width=True)
+# df["year"] = pd.to_numeric(df["year"], errors="coerce")
+df_grouped = df.groupby("year")[num_cols].mean().reset_index()
 merged = pd.merge(india, df, left_on="NAME_1", right_on="State_UT", how="inner")
 merged =merged[merged['NAME_1'] != 'Chandigarh']
 
+st.header('Dropout Analysis and Visualization')
 
-
-# Set up the Streamlit app
-st.title('Average Dropout Rates in India from 2012 to 2015')
+c1, c2 = st.columns(2)
+c1.subheader('Average Dropout Rates in India from 2012 to 2015')
 fig, ax = plt.subplots(1, 1, figsize=(20, 20))  # Increase the figsize to increase the size of the map
 merged.plot(column='Average', cmap='YlOrBr', linewidth=1, ax=ax, edgecolor='0.5', legend=True)
-
-# Annotate each state with its name at the center
 for idx, row in merged.iterrows():
     centroid_x, centroid_y = row['geometry'].centroid.x, row['geometry'].centroid.y
     state_name = row['NAME_1']
     ax.text(centroid_x, centroid_y, state_name, fontsize=10, ha='center', va='center')
+c1.pyplot(fig, use_container_width=True)
 
-# Display the map using Streamlit
-st.pyplot(fig)
-
-st.sidebar.header('User Input')
-year = st.sidebar.selectbox('Select Year', df['year'].unique())
-state = st.sidebar.selectbox('Select State', df['State_UT'].unique())
-
-
+c2.subheader('Correlation Matrix between Dropout Rates for each level')
 df_total = df[['Primary','Upper_Primary','Secondary','HrSecondary']]
-
-# Set up the Streamlit app
-st.title('Correlation Matrix and Pairplot of Dropout Rates')
-
-# Plotting the correlation matrix
-plt.figure(figsize=(12,8))
-sns.heatmap(df_total.corr(), annot=True, cmap="Blues")
-plt.title("Correlation matrix of dropout rates for each level")
-st.pyplot()
-st.set_option('deprecation.showPyplotGlobalUse', False)
-st.set_option('deprecation.showPyplotGlobalUse', False)
+fig,ax=plt.subplots(figsize=(10,9))
+sns.heatmap(df_total.corr(), annot=True, cmap="Blues", ax=ax)
+ax.set_title("Correlation matrix of dropout rates for each level")
+c2.pyplot(fig, use_container_width=True)
 
 # Plotting the pairplot
-sns.pairplot(df_total)
-st.pyplot()
+st.subheader('Pairplot of Dropout Rates')
+fig = sns.pairplot(df_total, corner=True)
+st.pyplot(fig)
 
+c1, c2 = st.columns(2)
 # Sort the dataframe by the average dropout rate in ascending order
 df_sorted = df.sort_values(by="Average", ascending=True)
 # Select the first five rows for the best states
@@ -101,37 +107,32 @@ df_best5 = df_sorted.head(5)
 df_worst5 = df_sorted.tail(5)
 # Concatenate the best and worst states into a new dataframe
 df_comparison = pd.concat([df_best5, df_worst5])
-
-
-# Extract the data and labels for the pie chart
 data = df_best5["Average"]
 labels = df_best5["State_UT"]
-
-# Create the pie chart using the plt.pie() function
-fig, ax = plt.subplots()
-ax.pie(data, labels=labels, autopct="%1.1f%%")
+fig, ax = plt.subplots(figsize=(6,6))
+ax.pie(data, labels=labels, autopct="%.1f%%", wedgeprops=dict(width=0.4),
+        colors=['#ff9999', '#66b3ff', '#99ff99', '#ff6633', '#ffccff'],
+        textprops={'fontsize': 12}, labeldistance=1.05, pctdistance=0.8)
 ax.set_title("Pie chart of the top 5 best states in terms of dropout rates")
 ax.axis("equal")
-
-# Show the pie chart using Streamlit
-st.pyplot(fig)
+c1.pyplot(fig)
 
 
 # Extract the data and labels for the pie chart
 data = df_worst5["Average"]
 labels = df_worst5["State_UT"]
-
-# Create the pie chart using the plt.pie() function
-fig, ax = plt.subplots()
-ax.pie(data, labels=labels, autopct="%1.1f%%", colors=['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#ffccff'])
+fig, ax = plt.subplots(figsize=(6,6))
+ax.pie(data, labels=labels, autopct="%1.1f%%", 
+       colors=['#ff9999', '#66b3ff', '#99ff99', '#99ffAA', '#ff6633'],
+        wedgeprops=dict(width=0.4), textprops={'fontsize': 12}, labeldistance=1.05, pctdistance=0.8)
 ax.set_title("Pie chart of the top 5 worst states in terms of dropout rates")
 ax.axis("equal")
 
 # Show the pie chart using Streamlit
-st.pyplot(fig)
+c2.pyplot(fig)
 
 
-
+c1, c2 = st.columns(2)
 df_boys=df[["Primary_Boys","Upper Primary_Boys","Secondary _Boys","HrSecondary_Boys"]]
 df_girls=df[["Primary_Girls","Upper Primary_Girls","Secondary _Girls","HrSecondary_Girls"]]
 df_boys = df_boys.apply(pd.to_numeric, errors='coerce')
@@ -148,12 +149,12 @@ girls_percentage = (girls_total / (boys_total + girls_total)) * 100
 labels = ['Boys', 'Girls']
 sizes = [boys_percentage, girls_percentage]
 colors = ['#ff9999', '#66b3ff']
-
 st.title('Comparison of Dropout Rates between Boys and Girls')
-fig, ax = plt.subplots(figsize=(8, 6))
-ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.pie(sizes, labels=labels, colors=colors, autopct='%.1f%%', startangle=90,
+        textprops={'fontsize': 12}, wedgeprops=dict(width=0.4), pctdistance=0.8, labeldistance=1.05)
 ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-st.pyplot(fig)
+c1.pyplot(fig)
 
 
 
