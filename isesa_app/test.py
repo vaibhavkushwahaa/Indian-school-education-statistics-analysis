@@ -1,46 +1,28 @@
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
 import plotly.express as px
 import streamlit as st
-import numpy as np
+import plotly.graph_objects as go
+import streamlit as st
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 
-
-rename_dict = {
-    "Primary_Total": "Primary",
-    "Upper Primary_Total": "Upper_Primary",
-    "Secondary _Total": "Secondary",
-    "HrSecondary_Total": "HrSecondary",
-}
-
-
+# Load data
 @st.cache_data()
-def load_enrollment_data():
-    df = pd.read_csv("gross-enrollment-ratio-2013-2016.csv")
-    df.replace("NR", np.nan, inplace=True)
-    df.rename(columns=rename_dict, inplace=True)
-    for col in ["Primary", "Upper_Primary", "Secondary", "HrSecondary"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-    df["Average"] = df[["Primary", "Upper_Primary", "Secondary", "HrSecondary"]].mean(axis=1)
+def load_data():
+    df = pd.read_csv('gross-enrollment-ratio-2013-2016.csv')
+    df['Year'] = df['Year'].apply(lambda x: int(x.split('-')[0]))  # Convert Year to integer
+
+    
+
     return df
 
-with st.spinner("Processing enrollment data..."):
-    df_enrollment = load_enrollment_data()
+df = load_data()
 
-import plotly.graph_objects as go
 
-# Assuming df_enrollment is your DataFrame and 'Year' is one of the columns
-fig = go.Figure()
+st.title("Indian School Education Enrollment Analysis (2013-2016)")
 
-# Add traces for each enrollment category
-fig.add_trace(go.Scatter(x=df_enrollment['Year'], y=df_enrollment['Primary'], mode='lines', name='Primary'))
-fig.add_trace(go.Scatter(x=df_enrollment['Year'], y=df_enrollment['Upper_Primary'], mode='lines', name='Upper Primary'))
-fig.add_trace(go.Scatter(x=df_enrollment['Year'], y=df_enrollment['Secondary'], mode='lines', name='Secondary'))
-fig.add_trace(go.Scatter(x=df_enrollment['Year'], y=df_enrollment['HrSecondary'], mode='lines', name='Higher Secondary'))
 
-# Set the title and labels
-fig.update_layout(title='Gross Enrollment Ratio Over the Years',
-                   xaxis_title='Year',
-                   yaxis_title='Enrollment Ratio')
 
-# Display the figure
-st.plotly_chart(fig)
