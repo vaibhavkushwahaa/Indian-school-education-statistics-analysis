@@ -20,15 +20,11 @@ st.set_option('deprecation.showPyplotGlobalUse', False)
 
 
 rename_dict={"Primary_Total": "Primary", 
-             "Upper Primary_Total": "Upper_Primary", 
+             "Upper Primary_Total": "Upper Primary", 
              "Secondary _Total": "Secondary", 
-             "HrSecondary_Total": "HrSecondary"}
+             "HrSecondary_Total": "Higher Secondary"}
 
-rename_dict1={"Primary_Total": "Primary",
-              "Upper_Primary_Total": "Upper_Primary",
-              "Secondary_Total": "Secondary",
-              "Higher_Secondary_Total": "HrSecondary"}
-              
+
 
 
 #df_enroll
@@ -42,10 +38,10 @@ def load_data():
     df.replace("NR", np.nan, inplace=True)
     df.rename(columns=rename_dict, inplace=True)
     df["Primary"] = df["Primary"].astype(float)
-    df["Upper_Primary"] = df["Upper_Primary"].astype(float)
+    df["Upper Primary"] = df["Upper Primary"].astype(float)
     df["Secondary"] = df["Secondary"].astype(float)
-    df["HrSecondary"] = df["HrSecondary"].astype(float)
-    df_total = df[['Primary','Upper_Primary','Secondary','HrSecondary']]
+    df["Higher Secondary"] = df["Higher Secondary"].astype(float)
+    df_total = df[['Primary','Upper Primary','Secondary','Higher Secondary']]
     df["Average"] = df_total.mean(axis=1)
 
 
@@ -219,7 +215,7 @@ if analysis_type == "DROPOUT":
 
     df['year'] = pd.to_numeric(df['year'].str[:4], errors='coerce')
     state = st.selectbox('Select a State for Prediction', df['State_UT'].unique())
-    education_level = st.selectbox('Select Education Level for Prediction', ['Primary', 'Upper_Primary', 'Secondary', 'HrSecondary'])
+    education_level = st.selectbox('Select Education Level for Prediction', ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'])
     state_data = df[df['State_UT'] == state]
     X = state_data[['year']].dropna()
     y = state_data[education_level].dropna()
@@ -255,7 +251,7 @@ if analysis_type == "DROPOUT":
     c1.pyplot(fig, use_container_width=True)
 
     c2.subheader('Dropout Rates Correlation Matrix')
-    df_total = df[['Primary','Upper_Primary','Secondary','HrSecondary']]
+    df_total = df[['Primary','Upper Primary','Secondary','Higher Secondary']]
     correlation_matrix = df_total.corr()
     fig,ax=plt.subplots(figsize=(10,8.5))
     sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
@@ -263,9 +259,9 @@ if analysis_type == "DROPOUT":
 
     # Calculate the total dropout rates for each level
     primary_total = df["Primary"].sum()
-    upper_primary_total = df["Upper_Primary"].sum()
+    upper_primary_total = df["Upper Primary"].sum()
     secondary_total = df["Secondary"].sum()
-    hrsecondary_total = df["HrSecondary"].sum()
+    hrsecondary_total = df["Higher Secondary"].sum()
 
 
     st.write("Total Dropout Rates:")
@@ -275,10 +271,27 @@ if analysis_type == "DROPOUT":
     st.write("Higher Secondary:", hrsecondary_total)
     
 elif analysis_type == "ENROLLMENT":
+
+    rename_dict1={"Primary_Total": "Primary",
+              "Upper_Primary_Total": "Upper Primary",
+              "Secondary_Total": "Secondary",
+              "Higher_Secondary_Total": "Higher Secondary"}
+              
     @st.cache_data()
     def load_data():
         df = pd.read_csv('gross-enrollment-ratio-2013-2016.csv')
         df['Year'] = df['Year'].apply(lambda x: int(x.split('-')[0]))  # Convert Year to integer
+        df.replace("NR", np.nan, inplace=True)
+        df.rename(columns=rename_dict1, inplace=True)
+        df["Primary"] = df["Primary"].astype(float)
+        df["Upper Primary"] = df["Upper Primary"].astype(float)
+        df["Secondary"] = df["Secondary"].astype(float)
+        df["Higher Secondary"] = pd.to_numeric(df["Higher Secondary"], errors='coerce')
+        df["Higher Secondary"].fillna(0, inplace=True)
+        df["Higher Secondary"] = df["Higher Secondary"].astype(float)
+        df_total = df[['Primary','Upper Primary','Secondary','Higher Secondary']]
+        df["Average"] = df_total.mean(axis=1)
+
 
         
 
@@ -294,7 +307,7 @@ elif analysis_type == "ENROLLMENT":
     
     # Get unique states and education levels
     states = df["State_UT"].unique()
-    education_levels = ['Primary', 'Upper_Primary', 'Secondary', 'Higher_Secondary']
+    education_levels = ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary']
 
     # Layout with two columns
     c1, c2 = st.columns(2)
@@ -317,7 +330,7 @@ elif analysis_type == "ENROLLMENT":
     fig = px.bar(
         data_frame=df_state,
         x="Year",
-        y=f"{selected_level}_Total",
+        y=f"{selected_level}",
         # title=f"Enrollment Rate for {selected_level} Level in {selected_state}",
         barmode="group",
         color_discrete_sequence=[ "#EF553B"]
@@ -337,11 +350,11 @@ elif analysis_type == "ENROLLMENT":
     st.header(f"State-wise Enrollment Comparison")
     # st.sidebar.header("User Input Parameters")
     selected_year = st.selectbox("Select Year", df['Year'].unique(), index=0)
-    selected_level1 = st.selectbox("Select Education Level", ['Primary', 'Upper_Primary', 'Secondary', 'Higher_Secondary'], index=0)
+    selected_level1 = st.selectbox("Select Education Level", ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'], index=0)
     state_wise_data = df[df['Year'] == selected_year]
 
     # Creating a bar plot with increased size
-    fig = px.bar(state_wise_data, x="State_UT", y=f"{selected_level1}_Total", 
+    fig = px.bar(state_wise_data, x="State_UT", y=f"{selected_level1}", 
                 title=f"State-wise Enrollment in {selected_level1} Education ({selected_year})")
 
     # Update the layout to increase the size
@@ -360,7 +373,7 @@ elif analysis_type == "ENROLLMENT":
 
     c1,c2=st.columns(2)
     selected_state = c1.selectbox("Select State", df['State_UT'].unique(), index=0)
-    selected_level = c1.selectbox("Select the Education Level", ['Primary', 'Upper_Primary', 'Secondary', 'Higher_Secondary'], index=0)
+    selected_level = c1.selectbox("Select the Education Level", ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'], index=0)
 
     # Gender Comparison
     c2.subheader(f"Gender Comparison in {selected_state} ({selected_year})")
@@ -375,7 +388,7 @@ elif analysis_type == "ENROLLMENT":
 
     # User selects a state and education level
     state = st.selectbox('Select a State for Prediction', df['State_UT'].unique())
-    education_level = st.selectbox('Select Education Level for Prediction', ['Primary_Total', 'Upper_Primary_Total', 'Secondary_Total', 'Higher_Secondary_Total'])
+    education_level = st.selectbox('Select Education Level for Prediction', ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'])
 
     # Filter data based on the state
     state_data = df[df['State_UT'] == state]
@@ -410,7 +423,7 @@ elif analysis_type == "ENROLLMENT":
         regions = {
         "North India": [
             'Haryana', 'Himachal Pradesh', 'Jammu And Kashmir', 'Punjab', 'Uttar Pradesh', 
-            'Uttarakhand', 'Delhi', 'Chandigarh'
+             'Delhi', 'Chandigarh'
         ],
         "South India": [
             'Andhra Pradesh', 'Karnataka', 'Kerala', 'Tamil Nadu', 'Telangana', 
@@ -444,8 +457,8 @@ elif analysis_type == "ENROLLMENT":
     selected_region = st.selectbox("Select Region", list(regions.keys()))
 
     # Dropdown for selecting the education level
-    education_levels = ['Primary_Total', 'Upper_Primary_Total', 'Secondary_Total', 'Higher_Secondary_Total']  # Modify as per your column names
-    selected_level = st.selectbox("Select Education Level", education_levels)
+    education_levelss = ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'," "]  # Modify as per your column names
+    selected_level = st.selectbox("Select Education Level", education_levelss)
 
     # Filter data based on the selected region and education level
     filtered_df = df[df['State_UT'].isin(regions[selected_region])]
