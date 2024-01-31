@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import geopandas as gpd
 import plotly.express as px
-import plotly.figure_factory as ff
 import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
 
@@ -24,12 +23,6 @@ rename_dict={"Primary_Total": "Primary",
              "Secondary _Total": "Secondary", 
              "HrSecondary_Total": "Higher Secondary"}
 
-
-
-
-#df_enroll
-# State_UT,Year,Primary_Boys,Primary_Girls,Primary_Total,Upper_Primary_Boys,Upper_Primary_Girls,Upper_Primary_Total,
-# Secondary_Boys,Secondary_Girls,Secondary_Total,Higher_Secondary_Boys,Higher_Secondary_Girls,Higher_Secondary_Total
 
 @st.cache_data()
 def load_data():
@@ -56,13 +49,14 @@ cat_cols = df.select_dtypes(include='object').columns
 
 
 
-st.markdown("""<h1 style="text-align: center;">Indian School Education Statistics Analysis</h1>""", unsafe_allow_html=True)
-st.markdown("""
-* **Python libraries:** pandas, streamlit, numpy, matplotlib, seaborn, geopandas
-* **Data source:** [Indian School Education Statistics](https://data.gov.in/resources/stateut-wise-average-annual-drop-out-rate-2012-13-2014-15-ministry-human-resource
+st.markdown(
+    """<h1 style="text-align: center; font-size: 60px;">Indian School Education Statistics Analysis</h1>""", 
+    unsafe_allow_html=True
+)
+c1, c2,c3 = st.columns([1,6,1])
+c2.image('0922bb92-5a3a-4539-9dc5-588cab4dc4a3.webp', use_column_width=True)
+st.markdown("""**Data source:** [Indian School Education Statistics](https://data.gov.in/resources/stateut-wise-average-annual-drop-out-rate-2012-13-2014-15-ministry-human-resource
 """)
-c1, c2 = st.columns([3,2])
-c1.image('https://mcmscache.epapr.in/post_images/website_350/post_29811255/full.jpg', use_column_width=True)
 
 
 
@@ -93,9 +87,7 @@ if analysis_type == "DROPOUT":
         y=col,
         title=f"Dropout Rate for {col} Level in {state}",
         barmode="group",
-        color_discrete_sequence=["#636efa", "#EF553B"],
-        
-        
+        color_discrete_sequence=px.colors.qualitative.Alphabet,
     )
 
     fig.update_layout(
@@ -110,19 +102,16 @@ if analysis_type == "DROPOUT":
 
 
 
-
-
     t1, t2 = st.tabs(["Bivariate","Trivariate"])
     num_cols = df.select_dtypes(include=np.number).columns.tolist()
+
     with t1:
         c1, c2 = st.columns(2)
         col1 = c1.radio("Select the first column for scatter plot", num_cols,)
         col2 = c2.radio("Select the Second column for scatter plot", num_cols)
-        fig = px.scatter(df, x=col1, y=col2, title=f'{col1} vs {col2}')
+        fig = px.scatter(df, x=col1, y=col2, title=f'{col1} vs {col2}',color_discrete_sequence=px.colors.diverging.Temps)
         st.plotly_chart(fig, use_container_width=True)
         
-        
-
     with t2:
         c1, c2, c3 = st.columns(3)
         col1 = c1.selectbox("Select the first column for 3d plot", num_cols)
@@ -140,16 +129,15 @@ if analysis_type == "DROPOUT":
     # Best states tab
     with tabs[0]:
         st.subheader('Top 5 Best States in Dropout Rates')
-        df_best5 = df.sort_values(by="Average", ascending=True).head(5)
+        df_best10 = df.sort_values(by="Average", ascending=True).head(8)  # Changed to top 10
         fig_best = px.pie(
-            df_best5,
+            df_best10,
             values="Average",
             names="State_UT",
-            color_discrete_sequence=["#ff9999", "#66b3ff", "#99ff99", "#99ffAA", "#ff6633"],
+            color_discrete_sequence=px.colors.qualitative.Pastel,
             hole=0.6,
         )
 
-        # Add annotation and update layout
         fig_best.add_annotation(
             x=0,
             y=0,
@@ -161,7 +149,6 @@ if analysis_type == "DROPOUT":
         fig_best.update_traces(textposition="inside", textinfo="percent+label")
         fig_best.update_layout(
             margin=dict(t=50, b=50, l=50, r=50),
-            # title_x=0.5,
         )
 
         st.plotly_chart(fig_best, use_container_width=True)
@@ -174,15 +161,16 @@ if analysis_type == "DROPOUT":
             df_worst5,
             values="Average",
             names="State_UT",
-            color_discrete_sequence=["#ff9999", "#66b3ff", "#99ff99", "#99ffAA", "#ff6633"],
+            color_discrete_sequence=px.colors.carto.Darkmint,
             hole=0.6,
         )
+
+    
 
         # Add annotation and update layout
         fig_worst.add_annotation(
             x=0,
             y=0,
-            text="Start",
             showarrow=False,
             font=dict(size=12, color="black"),
             xanchor="center",
@@ -193,7 +181,7 @@ if analysis_type == "DROPOUT":
             margin=dict(t=50, b=50, l=50, r=50),
             
         )
-
+        
         st.plotly_chart(fig_worst, use_container_width=True)
 
     with tabs[2]:
@@ -208,9 +196,13 @@ if analysis_type == "DROPOUT":
         girls_percentage = (girls_total / (boys_total + girls_total)) * 100
         labels = ['Boys', 'Girls']
         sizes = [boys_percentage, girls_percentage]
-        colors = ['#ff9999', '#66b3ff']
+        colors =px.colors.qualitative.Vivid
         fig = go.Figure(data=[go.Pie(labels=labels, values=sizes, textinfo='label+percent',
                                 marker=dict(colors=colors), hole=0.6)])
+
+        fig.update_layout(
+            margin=dict(t=50, b=50, l=50, r=50),
+        )
         st.plotly_chart(fig, use_container_width=True)
 
     df['year'] = pd.to_numeric(df['year'].str[:4], errors='coerce')
@@ -257,18 +249,6 @@ if analysis_type == "DROPOUT":
     sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
     c2.pyplot()
 
-    # Calculate the total dropout rates for each level
-    primary_total = df["Primary"].sum()
-    upper_primary_total = df["Upper Primary"].sum()
-    secondary_total = df["Secondary"].sum()
-    hrsecondary_total = df["Higher Secondary"].sum()
-
-
-    st.write("Total Dropout Rates:")
-    st.write("Primary:", primary_total)
-    st.write("Upper Primary:", upper_primary_total)
-    st.write("Secondary:", secondary_total)
-    st.write("Higher Secondary:", hrsecondary_total)
     
 elif analysis_type == "ENROLLMENT":
 
@@ -497,14 +477,30 @@ elif analysis_type == "STATES WITH FACILITIES":
     @st.cache_data
     def load_data():
         elec = pd.read_csv('percentage-of-schools-with-electricity-2013-2016.csv')
+        # data = pd.read_csv('percentage-of-schools-with-comps-2013-2016.csv')
         return elec
 
-    electricity = load_data()
+    electricity= load_data()
+    def load_computer_data():
+        comps = pd.read_csv('percentage-of-schools-with-comps-2013-2016.csv')
+        return comps
+
+    computers = load_computer_data()
 
     # Display Data
     if st.checkbox('Show Raw Data'):
-        st.subheader('Raw Data')
-        st.write(electricity)
+        c1,c2 = st.columns(2)
+        c1.subheader('Electricity Data')
+        c2.subheader('Computer Data')
+        c1.write(electricity)
+        c2.write(computers)
+        # c2.write(data)
+
+        # Display Data Option for Computers
+    # if st.checkbox('Show Computer Data'):
+    #     st.subheader('Computer Data')
+    #     c1, c2 = st.columns(2)
+    #     c2.write(computers)  # Assuming c2 is where you want to display the computer data
 
     c1,c2=st.columns(2)
     percentage_with_electricity = electricity['All Schools'].mean()
@@ -524,19 +520,51 @@ elif analysis_type == "STATES WITH FACILITIES":
     fig = px.pie(df_pie, names='Category', values='Percentage', title='Electricity Availability in Schools')
 
     # Display the pie chart
-    c1.plotly_chart(fig)
+    c1.plotly_chart(fig, use_container_width=True)
+
+    # Analysis for Computers (similar to electricity)
+    # c1, c2 = st.columns(2)  # You may adjust the columns depending on how you want to layout the visualization
+
+    # Calculate average percentage of schools with computers
+    percentage_with_computers = computers['All Schools'].mean()
+
+    # Calculate the percentage of schools without computers
+    percentage_without_computers = 100 - percentage_with_computers
+
+    # Data for computer availability pie chart
+    pie_data_computers = {
+        'Category': [ 'Without Computers','With Computers'],
+        'Percentage': [percentage_with_computers, percentage_without_computers]
+    }
+
+    df_pie_computers = pd.DataFrame(pie_data_computers)
+
+    # Create the pie chart for computer availability
+    fig_computers = px.pie(df_pie_computers, names='Category', values='Percentage', 
+                        title='Computer Availability in Schools')
+
+    # Display the pie chart for computer availability
+    c2.plotly_chart(fig_computers, use_container_width=True)
 
     #################
 
     yearly_electricity = electricity.groupby('year')['All Schools'].mean().reset_index()
+    yearly_computer = computers.groupby('year')['All Schools'].mean().reset_index()
 
     # Create the line chart
-    fig = px.line(yearly_electricity, x='year', y='All Schools', 
+    fig1 = px.line(yearly_electricity, x='year', y='All Schools', 
                 title='Rate of Electricity Availability in Schools (2013-2016)',
                 labels={'year': 'Year', 'All Schools': 'Percentage with Electricity'})
+    
+    fig2 = px.line(yearly_computer, x='year', y='All Schools',
+                title='Rate of Computer Availability in Schools (2013-2016)',
+                labels={'year': 'Year', 'All Schools': 'Percentage with Computers'})
+    
+    c1, c2 = st.columns(2)
 
     # Display the line chart
-    c2.plotly_chart(fig, use_container_width=True)
+    c1.plotly_chart(fig1, use_container_width=True)
+    c2.plotly_chart(fig2, use_container_width=True)
 
 
 
@@ -570,7 +598,7 @@ elif analysis_type == "STATES WITH FACILITIES":
     
     }
 
-    c1, c2 = st.columns([3,2])
+    c1, c2 = st.columns(2)
 
     # Create a state to region mapping
     state_to_region = {state: region for region, states in regions.items() for state in states}
@@ -591,8 +619,56 @@ elif analysis_type == "STATES WITH FACILITIES":
                     color_discrete_sequence=['teal'], height=500)
 
     # Display the chart
-    c1.header("Region Wise Average Percentage of All Schools with Electricity")
+    c1.header("Region Wise Average Percentage of Schools with Electricity")
     c1.plotly_chart(fig, use_container_width=True)
+    ######################3
+
+
+    
+
+    
+
+    computers['Region'] = computers['State_UT'].map(state_to_region)
+
+    # Order the regions in the DataFrame as per your defined order for the computer data
+    computers['Region'] = pd.Categorical(computers['Region'], categories=ordered_regions, ordered=True)
+
+    # Group by region for the computer data
+    region_wise_computers = computers.groupby('Region')['All Schools'].mean().reset_index()
+
+    # Create the funnel chart for the computer data
+    fig_computers = px.funnel(data_frame=region_wise_computers, x='Region', y='All Schools',
+                            labels={'Region': 'Region', 'All Schools': 'Average Percentage'},
+                            color_discrete_sequence=['teal'], height=500)
+
+    # Display the funnel chart for the computer data
+    c2.header("Region Wise Average Percentage of Schools with Computers")
+    c2.plotly_chart(fig_computers, use_container_width=True)
+
+
+################
+    states = electricity['State_UT'].unique().tolist()  # Simplified, assuming all states are in both datasets
+
+    # Dropdown for state selection
+    selected_state = st.selectbox('Select a State', states)
+
+    # Filter data based on selected state
+    electricity_state = electricity[electricity['State_UT'] == selected_state]
+    computers_state = computers[computers['State_UT'] == selected_state]
+    c1, c2 = st.columns(2)
+    # Example visualization: Percentage of schools with electricity in the selected state over the years
+    if not electricity_state.empty:
+        fig_electricity = px.line(electricity_state, x='year', y='All Schools',
+                                title=f'Electricity Availability in Schools - {selected_state}')
+        c1.plotly_chart(fig_electricity, use_container_width=True)
+
+    # Example visualization: Percentage of schools with computers in the selected state over the years
+    if not computers_state.empty:
+        fig_computers = px.line(computers_state, x='year', y='All Schools',
+                                title=f'Computer Availability in Schools - {selected_state}')
+        c2.plotly_chart(fig_computers, use_container_width=True)
+
+    
 
 
 
